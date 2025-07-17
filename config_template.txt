@@ -1,0 +1,13 @@
+# Azure Speech API Configuration Template
+# Copy this file to ~/.azure_speech_config and fill in your values
+
+# Your Azure region (e.g., eastus, westus2, centralus)
+AZURE_REGION="your-region-here"
+
+# Your Azure Speech Services subscription key
+AZURE_SPEECH_KEY="your-api-key-here"
+
+# Optional: Default settings
+# DEFAULT_VOICE="en-US-JennyNeural"
+# DEFAULT_LANGUAGE="en-US"
+# OUTPUT_DIR="./output"
