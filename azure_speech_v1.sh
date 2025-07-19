@@ -12,6 +12,8 @@
 # ./azure_speech_v1.sh voices
 # ./azure_speech_v1.sh tts -t "This is a test with a different voice" -v "en-US-AriaNeural" -o aria_test.wav
 # ./azure_speech_v1.sh tts -t "Testing with custom settings" -v "en-US-GuyNeural" -r "+25%" -p "+5%" -o custom_test.wav
+# ./azure_speech_v1.sh stt output/speech.wav
+# ./azure_speech_v1.sh stt -f output/speech.wav -j
 
 
 # Colors for output
@@ -372,9 +374,9 @@ speech_to_text() {
         "$stt_url")
     
     if [[ $? -eq 0 ]]; then
-        local status=$(echo "$response" | jq -r '.RecognitionStatus // empty')
+        local recognition_status=$(echo "$response" | jq -r '.RecognitionStatus // empty')
         
-        if [[ "$status" == "Success" ]]; then
+        if [[ "$recognition_status" == "Success" ]]; then
             log "INFO" "Speech recognition completed successfully!"
             
             if [[ "$json_output" == true ]]; then
@@ -393,7 +395,7 @@ speech_to_text() {
                 fi
             fi
         else
-            log "ERROR" "Speech recognition failed. Status: $status"
+            log "ERROR" "Speech recognition failed. Status: $recognition_status"
             if [[ "$json_output" == true ]]; then
                 echo "$response" | jq .
             fi
