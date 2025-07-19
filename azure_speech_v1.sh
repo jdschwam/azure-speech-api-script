@@ -8,6 +8,12 @@
 # - curl command line tool
 # - jq for JSON parsing (install with: brew install jq)
 
+# TEST COMMANDS
+# ./azure_speech_v1.sh voices
+# ./azure_speech_v1.sh tts -t "This is a test with a different voice" -v "en-US-AriaNeural" -o aria_test.wav
+# ./azure_speech_v1.sh tts -t "Testing with custom settings" -v "en-US-GuyNeural" -r "+25%" -p "+5%" -o custom_test.wav
+
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -136,9 +142,16 @@ setup_config() {
     echo -e "${BLUE}Azure Speech API Configuration${NC}"
     echo ""
     
-    read -p "Enter your Azure region (e.g., eastus, westus2): " AZURE_REGION
-    read -s -p "Enter your Azure Speech API key: " AZURE_SPEECH_KEY
-    echo ""
+    if [[ -t 0 ]]; then
+        echo -n "Enter your Azure region (e.g., eastus, westus2): "
+        read AZURE_REGION
+        echo -n "Enter your Azure Speech API key: "
+        read -s AZURE_SPEECH_KEY
+        echo ""
+    else
+        log "ERROR" "Interactive configuration requires a terminal"
+        exit 1
+    fi
     
     if [[ -z "$AZURE_REGION" || -z "$AZURE_SPEECH_KEY" ]]; then
         log "ERROR" "Region and API key are required"
@@ -223,7 +236,13 @@ text_to_speech() {
     done
     
     if [[ -z "$text" ]]; then
-        read -p "Enter text to convert to speech: " text
+        if [[ -t 0 ]]; then
+            echo -n "Enter text to convert to speech: "
+            read text
+        else
+            log "ERROR" "No text provided and not running interactively"
+            return 1
+        fi
     fi
     
     if [[ -z "$text" ]]; then
@@ -275,9 +294,14 @@ text_to_speech() {
         
         # Check if afplay is available (macOS audio player)
         if command -v afplay &> /dev/null; then
-            read -p "Play the audio now? (y/n): " play_audio
-            if [[ "$play_audio" =~ ^[Yy]$ ]]; then
-                afplay "$full_output_path"
+            if [[ -t 0 ]]; then
+                echo -n "Play the audio now? (y/n): "
+                read play_audio
+                if [[ "$play_audio" =~ ^[Yy]$ ]]; then
+                    afplay "$full_output_path"
+                fi
+            else
+                log "INFO" "Audio file created. Use 'afplay $full_output_path' to play it."
             fi
         fi
     else
