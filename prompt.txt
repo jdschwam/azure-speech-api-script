@@ -1,0 +1,291 @@
+# AI Prompts to Recreate Azure Speech API Script
+
+This file contains the sequence of individual prompts necessary to duplicate the functionality of this Azure Speech API application using AI assistance.
+
+## Phase 1: Initial Setup and Basic Structure
+
+### Prompt 1: Project Foundation
+```
+Create a zsh shell script for Azure Speech Services that provides both text-to-speech (TTS) and speech-to-text (STT) functionality. The script should:
+- Use Azure Cognitive Services Speech API
+- Support command-line interface with help system
+- Include proper error handling and logging
+- Use colors for output formatting
+- Be compatible with macOS/zsh environment
+```
+
+### Prompt 2: Configuration Management
+```
+Add configuration management to the Azure Speech script:
+- Store Azure region and API key in a config file (~/.azure_speech_config)
+- Include setup_config() function for interactive configuration
+- Add load_config() and save_config() functions
+- Test the configuration by making a token request to Azure
+- Secure the config file with proper permissions (600)
+```
+
+### Prompt 3: Dependency Checking
+```
+Add dependency checking functionality:
+- Check for required tools: curl, jq, bc, afplay
+- Provide installation instructions for missing dependencies
+- Exit gracefully if critical dependencies are missing
+- Use brew install commands for macOS
+```
+
+## Phase 2: Core Text-to-Speech Functionality
+
+### Prompt 4: Basic TTS Implementation
+```
+Implement text-to-speech functionality:
+- Accept text input via command line arguments or interactive prompt
+- Use Azure TTS API with Bearer token authentication
+- Support SSML markup for voice control
+- Save audio output to WAV files
+- Include voice selection, speech rate, and pitch control
+- Add optional audio playback using afplay
+```
+
+### Prompt 5: TTS Command Line Interface
+```
+Enhance TTS with comprehensive CLI options:
+- Support flags: -t/--text, -v/--voice, -o/--output, -r/--rate, -p/--pitch
+- Set default voice to "en-US-JennyNeural"
+- Create organized output directory structure (./output/tts/)
+- Provide user-friendly prompts for missing arguments
+- Add argument parsing and validation
+```
+
+## Phase 3: Speech-to-Text Implementation
+
+### Prompt 6: Basic STT Functionality
+```
+Implement speech-to-text functionality:
+- Accept audio file input via command line or interactive prompt
+- Support multiple audio formats: WAV, MP3, OGG, FLAC, OPUS, WEBM, M4A
+- Use Azure STT API with proper content-type headers
+- Handle file size validation (25MB Azure limit)
+- Provide detailed error handling and HTTP status code checking
+```
+
+### Prompt 7: STT Output Management
+```
+Enhance STT with organized output management:
+- Create unique session IDs using timestamps and filenames
+- Save transcriptions to ./output/stt/ directory
+- Generate both text and JSON output files
+- Include confidence scores in output
+- Save raw API responses for debugging
+- Support JSON-only output mode with -j flag
+```
+
+## Phase 4: Audio Format Support and Optimization
+
+### Prompt 8: Multi-Format Audio Support
+```
+Add comprehensive audio format support:
+- Detect audio format from file extensions
+- Set appropriate Content-Type headers for each format
+- Handle unknown formats gracefully with fallback to WAV
+- Log audio file information (size, format, content-type)
+- Provide clear error messages for unsupported scenarios
+```
+
+### Prompt 9: Audio Conversion Integration
+```
+Implement automatic audio conversion for optimal speech recognition:
+- Add FFmpeg dependency checking
+- Create is_optimal_wav_format() function using ffprobe
+- Convert audio to optimal settings: 16kHz, mono, 16-bit PCM
+- Handle both WAV optimization and format conversion
+- Use temporary files and proper cleanup
+- Provide conversion status logging
+```
+
+### Prompt 10: In-Place File Conversion
+```
+Modify audio conversion to save converted files using the same path as the original:
+- Replace original files with optimized versions
+- Use temporary files during conversion process
+- Ensure proper cleanup on conversion failure
+- Log conversion success/failure appropriately
+```
+
+## Phase 5: File Organization and Collision Prevention
+
+### Prompt 11: Organized Directory Structure
+```
+Implement comprehensive file organization system:
+- Create separate directories: output/tts/, output/stt/, output/debug/
+- Use timestamp-based unique naming for all outputs
+- Prevent file collisions with session IDs
+- Generate collision_test files to verify prevention
+- Document the organization system in README
+```
+
+### Prompt 12: File Organization Documentation
+```
+Create detailed documentation for the file organization system:
+- Document directory structure and naming conventions
+- Explain collision prevention mechanisms
+- Provide examples of generated filenames
+- Include best practices for file management
+- Create FILE_ORGANIZATION.md with comprehensive details
+```
+
+## Phase 6: Advanced Features and Voice Management
+
+### Prompt 13: Voice Listing Functionality
+```
+Add voice management capabilities:
+- Implement list_voices() function
+- Query Azure TTS voices endpoint
+- Display available voices with names, locales, and genders
+- Sort voices alphabetically for easy browsing
+- Handle API errors gracefully
+```
+
+### Prompt 14: Debug and Diagnostic Features
+```
+Create comprehensive debug functionality:
+- Show configuration status and credentials (masked)
+- Check all dependencies and their versions
+- Test connectivity to Azure endpoints
+- Display output directory status and file counts
+- Show recent output files
+- Provide troubleshooting information
+```
+
+## Phase 7: Documentation and User Experience
+
+### Prompt 15: Audio Format Documentation
+```
+Create comprehensive audio format documentation:
+- Document all supported formats (WAV, MP3, OGG, FLAC, OPUS, WEBM, M4A)
+- Explain optimal settings for speech recognition
+- Provide format conversion examples
+- Include technical specifications and limitations
+- Create AUDIO_FORMATS.md file
+```
+
+### Prompt 16: Usage Examples and README
+```
+Create comprehensive usage documentation:
+- Document all commands and options
+- Provide practical examples for TTS and STT
+- Include setup instructions and prerequisites
+- Document the CLI interface and flags
+- Create usage_examples.sh with test commands
+- Update README.md with complete information
+```
+
+### Prompt 17: Interactive Prompting Enhancement
+```
+Enhance user experience with interactive prompting:
+- Prompt for audio files when not provided in STT
+- Remove surrounding quotes from file paths automatically
+- Provide helpful error messages with tips
+- Support drag-and-drop file path input
+- Add tab completion suggestions in error messages
+```
+
+## Phase 8: Error Handling and Robustness
+
+### Prompt 18: Enhanced Error Handling
+```
+Implement comprehensive error handling:
+- Add timeout handling for API requests (30 seconds)
+- Provide specific error messages for different failure scenarios
+- Include curl exit code analysis
+- Handle network connectivity issues
+- Add retry logic suggestions for transient failures
+```
+
+### Prompt 19: Parameter Compatibility Fixes
+```
+Fix shell compatibility issues for zsh:
+- Replace bash-specific parameter expansions (${var,,} and ${var%.*})
+- Use tr command for case conversion
+- Use sed or basename for file extension removal
+- Test all parameter expansions for zsh compatibility
+- Ensure cross-platform shell compatibility
+```
+
+## Phase 9: Testing and Validation
+
+### Prompt 20: Test Suite Creation
+```
+Create comprehensive test scenarios:
+- Test TTS with different voices, rates, and pitches
+- Test STT with various audio formats
+- Test file organization and collision prevention
+- Test error handling with invalid inputs
+- Test configuration setup and validation
+- Create automated test scripts
+```
+
+### Prompt 21: Edge Case Handling
+```
+Handle edge cases and error scenarios:
+- Empty or missing input validation
+- Invalid file paths and permissions
+- Network connectivity failures
+- Invalid Azure credentials
+- Corrupted audio files
+- API rate limiting and quota exceeded scenarios
+```
+
+## Phase 10: Final Polish and Optimization
+
+### Prompt 22: Performance Optimization
+```
+Optimize script performance and user experience:
+- Minimize API calls where possible
+- Implement efficient file handling
+- Add progress indicators for long operations
+- Optimize temporary file management
+- Improve startup time and dependency checking
+```
+
+### Prompt 23: Final Documentation and Cleanup
+```
+Complete the application with final touches:
+- Review and update all documentation
+- Ensure consistent coding style and formatting
+- Add final comments and code documentation
+- Create comprehensive help system
+- Test all functionality end-to-end
+- Prepare for distribution and sharing
+```
+
+## Usage Instructions
+
+To recreate this application using AI:
+
+1. **Start with Phase 1 prompts** to establish the basic structure
+2. **Progress sequentially through each phase** - each builds on the previous
+3. **Test functionality after each major phase** to ensure everything works
+4. **Adapt prompts as needed** based on your specific requirements or AI responses
+5. **Use the specific technical details** mentioned in each prompt for accuracy
+
+## Key Technical Requirements to Mention
+
+When using these prompts with AI, ensure you specify:
+- **Target Platform**: macOS with zsh shell
+- **Azure Services**: Cognitive Services Speech API (TTS and STT)
+- **Dependencies**: curl, jq, bc, afplay, ffmpeg (optional)
+- **Authentication**: Bearer token via Azure subscription key
+- **File Formats**: Multi-format audio support with automatic conversion
+- **Output Organization**: Structured directories with collision prevention
+
+## Expected Outcome
+
+Following these prompts should result in a complete Azure Speech API script with:
+- ✅ Full TTS and STT functionality
+- ✅ Multi-format audio support with automatic optimization
+- ✅ Organized file management with collision prevention
+- ✅ Comprehensive error handling and logging
+- ✅ Interactive CLI with help system
+- ✅ Complete documentation and examples
+- ✅ zsh/macOS compatibility
+- ✅ Professional-grade code quality and user experience

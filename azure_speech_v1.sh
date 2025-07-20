@@ -45,7 +45,7 @@ show_help() {
     echo "Commands:"
     echo "  config                Set up Azure credentials"
     echo "  tts [text]           Text-to-speech conversion"
-    echo "  stt [audio_file]     Speech-to-text conversion"
+    echo "  stt [audio_file]     Speech-to-text conversion (prompts if no file given)"
     echo "  voices               List available voices"
     echo "  debug                Show debug information"
     echo "  help                 Show this help message"
@@ -62,10 +62,16 @@ show_help() {
     echo "  -l, --language LANG  Language code (default: $DEFAULT_LANGUAGE)"
     echo "  -j, --json           Output result as JSON"
     echo ""
+    echo "Supported Audio Formats:"
+    echo "  WAV, MP3, OGG, FLAC, OPUS, WEBM, M4A"
+    echo "  Max file size: 25MB, Max duration: 10 minutes"
+    echo ""
     echo "Examples:"
     echo "  $0 config"
     echo "  $0 tts -t \"Hello, world!\" -v \"en-US-AriaNeural\" -o hello.wav"
+    echo "  $0 tts \"Quick text without options\""
     echo "  $0 stt -f audio.wav -l en-US"
+    echo "  $0 stt  # Will prompt for audio file"
     echo "  $0 voices"
     echo ""
     echo "File Organization:"
@@ -202,6 +208,35 @@ get_access_token() {
         return 0
     else
         log "ERROR" "Failed to get access token"
+        return 1
+    fi
+}
+
+# Check if WAV file is in optimal format for speech recognition
+is_optimal_wav_format() {
+    local audio_file="$1"
+    
+    if ! command -v ffprobe &> /dev/null; then
+        # If ffprobe is not available, assume conversion is needed
+        return 1
+    fi
+    
+    # Get audio info
+    local audio_info=$(ffprobe -v quiet -print_format json -show_streams "$audio_file" 2>/dev/null)
+    
+    if [[ $? -ne 0 ]]; then
+        return 1
+    fi
+    
+    # Check sample rate, channels, and codec
+    local sample_rate=$(echo "$audio_info" | jq -r '.streams[0].sample_rate // empty')
+    local channels=$(echo "$audio_info" | jq -r '.streams[0].channels // empty')
+    local codec=$(echo "$audio_info" | jq -r '.streams[0].codec_name // empty')
+    
+    # Optimal for speech: 16kHz, mono, PCM
+    if [[ "$sample_rate" == "16000" && "$channels" == "1" && "$codec" == "pcm_s16le" ]]; then
+        return 0
+    else
         return 1
     fi
 }
@@ -353,21 +388,97 @@ speech_to_text() {
     done
     
     if [[ -z "$audio_file" ]]; then
+        if [[ -t 0 ]]; then
+            echo -n "Enter path to audio file to transcribe: "
+            read audio_file
+            # Remove surrounding quotes if present
+            audio_file=$(echo "$audio_file" | sed "s/^['\"]//;s/['\"]$//")
+        else
+            log "ERROR" "No audio file provided and not running interactively"
+            return 1
+        fi
+    fi
+    
+    if [[ -z "$audio_file" ]]; then
         log "ERROR" "No audio file provided"
         return 1
     fi
     
     if [[ ! -f "$audio_file" ]]; then
         log "ERROR" "Audio file not found: $audio_file"
+        log "INFO" "Make sure the file path is correct (without quotes)"
+        log "INFO" "Tip: Use tab completion or drag & drop the file into terminal"
         return 1
     fi
     
     log "INFO" "Transcribing audio file: $audio_file"
     log "INFO" "Language: $language"
     
+    # Check if we should convert the file for optimal speech recognition
+    local original_file="$audio_file"
+    local file_extension=$(echo "$audio_file" | sed 's/.*\.//' | tr '[:upper:]' '[:lower:]')
+    
+    # Convert non-WAV files or suboptimal WAV files to optimal format
+    if [[ "$file_extension" != "wav" ]] || ! is_optimal_wav_format "$audio_file"; then
+        if command -v ffmpeg &> /dev/null; then
+            log "INFO" "Converting audio to optimal format for speech recognition..."
+            local converted_file="${audio_file%.*}_converted.wav"
+            
+            # Convert to optimal settings: 16kHz, mono, 16-bit PCM
+            if ffmpeg -i "$audio_file" -ar 16000 -ac 1 -c:a pcm_s16le "$converted_file" -y &>/dev/null; then
+                audio_file="$converted_file"
+                log "INFO" "Audio converted to: $audio_file (16kHz, mono, 16-bit PCM)"
+            else
+                log "WARN" "Audio conversion failed, proceeding with original file"
+            fi
+        else
+            log "WARN" "FFmpeg not found. Install with 'brew install ffmpeg' for optimal audio conversion"
+            log "INFO" "Proceeding with original file format"
+        fi
+    fi
+    
     # Check audio file size and format
     local file_size=$(stat -f%z "$audio_file" 2>/dev/null || echo "unknown")
+    local file_extension=$(echo "$audio_file" | sed 's/.*\.//' | tr '[:upper:]' '[:lower:]')
+    local content_type="audio/wav"  # default
+    
+    # Set appropriate content type based on file extension
+    case "$file_extension" in
+        "wav")
+            content_type="audio/wav"
+            ;;
+        "mp3")
+            content_type="audio/mpeg"
+            ;;
+        "ogg")
+            content_type="audio/ogg"
+            ;;
+        "flac")
+            content_type="audio/flac"
+            ;;
+        "opus")
+            content_type="audio/opus"
+            ;;
+        "webm")
+            content_type="audio/webm"
+            ;;
+        "m4a")
+            content_type="audio/m4a"
+            ;;
+        *)
+            log "WARN" "Unknown audio format: $file_extension, trying as WAV"
+            content_type="audio/wav"
+            ;;
+    esac
+    
     log "INFO" "Audio file size: $file_size bytes"
+    log "INFO" "Audio format: $file_extension (Content-Type: $content_type)"
+    
+    # Check file size (Azure has 25MB limit)
+    if [[ "$file_size" != "unknown" && "$file_size" -gt 26214400 ]]; then
+        log "ERROR" "Audio file too large: ${file_size} bytes (max 25MB)"
+        return 1
+    fi
     
     # Get access token
     local token=$(get_access_token)
@@ -389,12 +500,14 @@ speech_to_text() {
     
     # Generate timestamp for unique filenames
     local timestamp=$(date '+%Y%m%d_%H%M%S')
-    local session_id="${timestamp}_$(basename "$audio_file" .wav)"
+    local audio_basename=$(basename "$audio_file")
+    local audio_name=$(echo "$audio_basename" | sed 's/\.[^.]*$//')  # Remove extension safely
+    local session_id="${timestamp}_${audio_name}"
     
     # Add timeout and verbose error handling
     local response=$(curl -m 30 -w "HTTPCODE:%{http_code}" -X POST \
         -H "Authorization: Bearer $token" \
-        -H "Content-Type: audio/wav" \
+        -H "Content-Type: $content_type" \
         -H "Accept: application/json" \
         --data-binary "@$audio_file" \
         "$stt_url" 2>/dev/null)
